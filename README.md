@@ -230,19 +230,76 @@ are also some lower-level capabilities that can be used to more closely control
 the rule execution.
 
 For example, you can get all the production matches from the matches property.
-```python
-matches = list(light_net.matches)
-```
+```体彩例子说明
+1、事实（fact）  --  对象之间及对象属性之间的多元关系。
+物模型是对象属性之间关系，事实用一个三元组来表示：(identifier ^attribute value)
 
-You can also get just the new matches.
-```python
-new = list(light_net.new_matches)
-```
+W1: 体彩票, 期号，21105
+W2: 体彩票, 序列号，112233-121311-187632-192345
+W3: 体彩票, 开奖时间，2021-12-13
+W4: 体彩票, 前区号码: (‘09’, ‘18’, ‘19’, ‘29’, ‘30’)
+W5: 体彩票, 后区号码: (‘04’, ‘11’)
+W6: 开奖票，期号，21105
+W7: 开奖票，开奖时间，2021-12-13
+W8: 开奖票, 前区号码: (‘09’, ‘17’, ‘19’, ‘29’, ‘34’)
+W9: 开奖票, 后区号码: (‘04’, ‘11’)
 
-You can fire one of the matches.
-```python
->>> matches[0].fire()
-making red
+2、规则（rule）  --  由条件和结论构成的推理语句，当存在事实满足条件时，相应结论被激活。
+
+一等奖：投注号码与当期开奖号码全部相同(顺序不限，下同)，即中奖；
+ 
+二等奖：投注号码与当期开奖号码中的五个前区号码及任意一个后区号码相同，即中奖；
+ 
+三等奖：投注号码与当期开奖号码中的五个前区号码相同，即中奖；
+ 
+四等奖：投注号码与当期开奖号码中的任意四个前区号码及两个后区号码相同，即中奖；
+ 
+五等奖：投注号码与当期开奖号码中的任意四个前区号码及任意一个后区号码相同，即中奖；
+ 
+六等奖：投注号码与当期开奖号码中的任意三个前区号码及两个后区号码相同，即中奖；
+ 
+七等奖：投注号码与当期开奖号码中的任意四个前区号码相同，即中奖；
+ 
+八等奖：投注号码与当期开奖号码中的任意三个前区号码及任意一个后区号码相同，或者任意两个前区号码及两个后区号码相同，即中奖；
+ 
+九等奖：投注号码与当期开奖号码中的任意三个前区号码相同，或者任意一个前区号码及两个后区号码相同，或者任意两个前区号码及任意一个后区号码相同，或者两个后区号码相同，即中奖。
+
+3、建立数据模型
+
+<SPORTS_LOTTERY_ID>	^sl_issue_no		<issue_serial_number>	# 21105
+<SPORTS_LOTTERY_ID>	^sl_time			<lottery_valid_date>		# 20210911
+<SPORTS_LOTTERY_ID>	^sl_front_area		<ticket_fa_list>			# [11, 25, 26, 27, 33]
+<SPORTS_LOTTERY_ID>	^sl_back_area		<ticket_ba_list>			# [01, 06]
+
+run_lottery				^rl_issue_no		<issue_serial_number>	# 21105
+run_lottery				^rl_time		<lottery_valid_date>	# 20210911
+run_lottery				^rl_front_area		<rl_fa_list>		# [11, 25, 26, 27, 33]
+run_lottery				^rl_back_area		<rl_ba_list>		# [01, 06]
+
+4、建立产品
+C1 = Cond(V('SPORTS_LOTTERY_ID'), 'sl_issue_no', V('issue_serial_number'))
+C2 = Cond(V('SPORTS_LOTTERY_ID'), 'sl_time', V('lottery_valid_date'))
+C3 = Cond(V('SPORTS_LOTTERY_ID'), 'sl_front_area', V('ticket_fa_list'))
+C4 = Cond(V('SPORTS_LOTTERY_ID'), 'sl_back_area', V('ticket_ba_list'))
+
+C5 = Cond('run_lottery', 'rl_issue_no', V('issue_serial_number'))
+C6 = Cond('run_lottery', 'rl_time', V('lottery_valid_date'))
+C7 = Cond('run_lottery', 'rl_front_area', V('rl_fa_list'))
+C8 = Cond('run_lottery', 'rl_back_area', V('rl_ba_list'))
+
+front_area_bind = Bind(lambda ticket_fa_list, rl_fa_list: len(set(ticket_fa_list) & set(rl_fa_list)), V('fa_guessed'))
+fa_f0 = Filter(lambda fa_guessed: fa_guessed == 0)
+fa_f1 = Filter(lambda fa_guessed: fa_guessed == 1)
+fa_f2 = Filter(lambda fa_guessed: fa_guessed == 2)
+fa_f3 = Filter(lambda fa_guessed: fa_guessed == 3)
+fa_f4 = Filter(lambda fa_guessed: fa_guessed == 4)
+fa_f5 = Filter(lambda fa_guessed: fa_guessed == 5)
+
+back_area_bind = Bind(lambda ticket_ba_list, rl_ba_list: len(set(ticket_ba_list) & set(rl_ba_list)), V('ba_guessed'))
+ba_f0 = Filter(lambda ba_guessed: ba_guessed == 0)
+ba_f1 = Filter(lambda ba_guessed: ba_guessed == 1)
+ba_f2 = Filter(lambda ba_guessed: ba_guessed == 2)
+
 ```
 
 [experta]: https://github.com/nilp0inter/experta
